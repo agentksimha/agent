@@ -2,9 +2,10 @@ import streamlit as st
 from datasets import load_dataset
 
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma
 from langchain.chains import RetrievalQA
-from langchain.llms import HuggingFacePipeline
+from langchain_community.llms import HuggingFacePipeline
+from langchain.schema import Document
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 
 st.set_page_config(page_title="Agentic RAG Demo", layout="wide")
@@ -35,7 +36,10 @@ def load_pipeline_and_retriever():
         texts = [d["sentence"] for d in dataset["train"]]
 
         # Split texts manually
-        docs = manual_text_splitter(texts, chunk_size=200, overlap=50)
+        split_texts = manual_text_splitter(texts, chunk_size=200, overlap=50)
+
+        # Convert split texts to Document objects
+        docs = [Document(page_content=t) for t in split_texts]
 
         # Embeddings
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -46,7 +50,12 @@ def load_pipeline_and_retriever():
         model_name = "google/flan-t5-small"
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-        pipe = pipeline("text2text-generation", model=model, tokenizer=tokenizer, max_length=256)
+        pipe = pipeline(
+            "text2text-generation",
+            model=model,
+            tokenizer=tokenizer,
+            max_length=256
+        )
         llm = HuggingFacePipeline(pipeline=pipe)
 
         # QA chain
@@ -93,3 +102,4 @@ if st.button("Run Agent") and query:
         if calc_result:
             st.markdown(f"**Finance Calculator:** {calc_result}")
         st.markdown(f"**Document Retrieval:** {doc_result}")
+
