@@ -1,5 +1,4 @@
 # Core
-# Core
 streamlit==1.27.2
 torch==2.5.1
 transformers==4.45.2
@@ -8,16 +7,16 @@ sentence-transformers==3.0.1
 chromadb==0.5.3
 
 # LangChain
-langchain==0.3.2
+langchain==1.0.2
 langchain-community==0.3.1
-langchain-huggingface==0.0.3
+langchain-huggingface==0.1.0
 
 # Hugging Face
 huggingface-hub==0.25.2
 
 # Utilities
 tiktoken==0.7.0
-protobuf<6.0.0
+protobuf==5.0.0
 
 
 
