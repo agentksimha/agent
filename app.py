@@ -1,6 +1,5 @@
 import json
 import streamlit as st
-
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.chains import RetrievalQA
@@ -12,21 +11,23 @@ st.set_page_config(page_title="Agentic RAG Demo", layout="wide")
 st.title("📊 Financial Agentic RAG Demo")
 
 # =========================
-# Load pipeline and retriever
+# Load pre-chunked documents
+# =========================
+with open("chunks.json", "r", encoding="utf-8") as f:
+    chunks = json.load(f)
+
+# Convert chunks to Document objects for Chroma
+docs = [Document(page_content=t) for t in chunks]
+
+# =========================
+# Load pipeline and retriever (on-demand)
 # =========================
 @st.cache_resource(show_spinner=True)
-def load_pipeline_and_retriever():
+def load_pipeline_and_retriever(_docs):
     with st.spinner("Loading documents, embeddings, and model... this may take 1–2 minutes"):
-        # Load split texts from chunks.json
-        with open("chunks.json", "r", encoding="utf-8") as f:
-            split_texts = json.load(f)
-
-        # Convert to Document objects
-        docs = [Document(page_content=t) for t in split_texts]
-
         # Embeddings
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-        db = Chroma.from_documents(docs, embeddings)
+        db = Chroma.from_documents(_docs, embeddings)
         retriever = db.as_retriever()
 
         # LLM pipeline
@@ -50,8 +51,8 @@ def load_pipeline_and_retriever():
 
     return qa_chain
 
-# Load QA chain
-qa_chain = load_pipeline_and_retriever()
+# Initialize QA chain as None
+qa_chain = None
 
 # =========================
 # Simple financial calculator tool
@@ -64,7 +65,7 @@ def finance_calculator(query: str):
     return "No relevant financial data found."
 
 # =========================
-# Streamlit sidebar and query input
+# Sidebar and query input
 # =========================
 st.sidebar.header("Tools")
 use_calculator = st.sidebar.checkbox("Use Finance Calculator", value=True)
@@ -72,9 +73,15 @@ use_calculator = st.sidebar.checkbox("Use Finance Calculator", value=True)
 query = st.text_area("Enter your query:", "")
 
 if st.button("Run Agent") and query:
+    # Load QA chain only when user runs agent
+    if qa_chain is None:
+        qa_chain = load_pipeline_and_retriever(_docs=docs)  # <--- use _docs
+
     with st.spinner("Thinking..."):
         # Step 1: calculator tool
-        calc_result = finance_calculator(query) if use_calculator else ""
+        calc_result = ""
+        if use_calculator:
+            calc_result = finance_calculator(query)
 
         # Step 2: retrieve from documents
         doc_result = qa_chain.run(query)
@@ -84,6 +91,7 @@ if st.button("Run Agent") and query:
         if calc_result:
             st.markdown(f"**Finance Calculator:** {calc_result}")
         st.markdown(f"**Document Retrieval:** {doc_result}")
+
 
 
 
