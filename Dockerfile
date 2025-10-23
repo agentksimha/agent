@@ -1,14 +1,11 @@
-# Use official Python base image
-# =============================
-# Base image
-# =============================
+# Use official Python slim image
 FROM python:3.12-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy only requirements first for caching
-COPY "requirements (2).txt" 
+# Copy requirements first for caching
+COPY requirements.txt .
 
 # Upgrade pip and install dependencies
 RUN python -m pip install --upgrade pip && \
