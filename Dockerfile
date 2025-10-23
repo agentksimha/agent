@@ -8,7 +8,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Copy only requirements first for caching
-COPY requirements.txt .
+COPY "requirements (2).txt" ./requirements.txt
 
 # Upgrade pip and install dependencies
 RUN python -m pip install --upgrade pip && \
