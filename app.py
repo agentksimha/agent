@@ -12,22 +12,18 @@ st.set_page_config(page_title="Agentic RAG Demo", layout="wide")
 st.title("📊 Financial Agentic RAG Demo")
 
 # =========================
-# Load chunks.json
-# =========================
-@st.cache_resource(show_spinner=True)
-def load_docs():
-    with open("chunks.json", "r", encoding="utf-8") as f:
-        split_texts = json.load(f)
-    # Convert each chunk to a Document
-    docs = [Document(page_content=t) for t in split_texts]
-    return docs
-
-# =========================
 # Load pipeline and retriever
 # =========================
 @st.cache_resource(show_spinner=True)
-def load_pipeline_and_retriever(docs):
-    with st.spinner("Loading embeddings and model..."):
+def load_pipeline_and_retriever():
+    with st.spinner("Loading documents, embeddings, and model... this may take 1–2 minutes"):
+        # Load split texts from chunks.json
+        with open("chunks.json", "r", encoding="utf-8") as f:
+            split_texts = json.load(f)
+
+        # Convert to Document objects
+        docs = [Document(page_content=t) for t in split_texts]
+
         # Embeddings
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         db = Chroma.from_documents(docs, embeddings)
@@ -54,9 +50,8 @@ def load_pipeline_and_retriever(docs):
 
     return qa_chain
 
-# Load docs and QA chain
-docs = load_docs()
-qa_chain = load_pipeline_and_retriever(docs)
+# Load QA chain
+qa_chain = load_pipeline_and_retriever()
 
 # =========================
 # Simple financial calculator tool
@@ -79,9 +74,7 @@ query = st.text_area("Enter your query:", "")
 if st.button("Run Agent") and query:
     with st.spinner("Thinking..."):
         # Step 1: calculator tool
-        calc_result = ""
-        if use_calculator:
-            calc_result = finance_calculator(query)
+        calc_result = finance_calculator(query) if use_calculator else ""
 
         # Step 2: retrieve from documents
         doc_result = qa_chain.run(query)
@@ -91,5 +84,6 @@ if st.button("Run Agent") and query:
         if calc_result:
             st.markdown(f"**Finance Calculator:** {calc_result}")
         st.markdown(f"**Document Retrieval:** {doc_result}")
+
 
 
