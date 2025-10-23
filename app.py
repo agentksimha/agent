@@ -1,5 +1,5 @@
+import json
 import streamlit as st
-from datasets import load_dataset
 
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
@@ -12,35 +12,22 @@ st.set_page_config(page_title="Agentic RAG Demo", layout="wide")
 st.title("📊 Financial Agentic RAG Demo")
 
 # =========================
-# Manual character-based splitter
+# Load chunks.json
 # =========================
-def manual_text_splitter(texts, chunk_size=200, overlap=50):
-    chunks = []
-    for text in texts:
-        start = 0
-        text_len = len(text)
-        while start < text_len:
-            end = min(start + chunk_size, text_len)
-            chunks.append(text[start:end])
-            start += chunk_size - overlap
-    return chunks
+@st.cache_resource(show_spinner=True)
+def load_docs():
+    with open("chunks.json", "r", encoding="utf-8") as f:
+        split_texts = json.load(f)
+    # Convert each chunk to a Document
+    docs = [Document(page_content=t) for t in split_texts]
+    return docs
 
 # =========================
 # Load pipeline and retriever
 # =========================
 @st.cache_resource(show_spinner=True)
-def load_pipeline_and_retriever():
-    with st.spinner("Loading dataset and model... this may take 1–2 minutes"):
-        # Load dataset
-        dataset = load_dataset("gtfintechlab/financial_phrasebank_sentences_allagree", "5768")
-        texts = [d["sentence"] for d in dataset["train"]]
-
-        # Split texts manually
-        split_texts = manual_text_splitter(texts, chunk_size=200, overlap=50)
-
-        # Convert split texts to Document objects
-        docs = [Document(page_content=t) for t in split_texts]
-
+def load_pipeline_and_retriever(docs):
+    with st.spinner("Loading embeddings and model..."):
         # Embeddings
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         db = Chroma.from_documents(docs, embeddings)
@@ -67,7 +54,9 @@ def load_pipeline_and_retriever():
 
     return qa_chain
 
-qa_chain = load_pipeline_and_retriever()
+# Load docs and QA chain
+docs = load_docs()
+qa_chain = load_pipeline_and_retriever(docs)
 
 # =========================
 # Simple financial calculator tool
@@ -102,4 +91,5 @@ if st.button("Run Agent") and query:
         if calc_result:
             st.markdown(f"**Finance Calculator:** {calc_result}")
         st.markdown(f"**Document Retrieval:** {doc_result}")
+
 
